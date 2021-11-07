@@ -89,7 +89,7 @@ body('url').exists().isURL(),
             // saved!
             const theLink= "<h3>Your link is </h3><a href=\"\/api\/shorturl\/"+ rec.index+ "\">" + req.protocol + "://" + req.headers.host + "/api/shorturl/" + rec.index + "</a>";
 // { original_url : 'https://freeCodeCamp.org', short_url : 1}
-            res.status(201).send({original_url : req.body.url, short_url : req.index})
+            res.status(201).send({"original_url" : req.body.url , "short_url" : rec.index})
           });
         });
       });
