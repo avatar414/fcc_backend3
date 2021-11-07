@@ -88,7 +88,8 @@ body('url').exists().isURL(),
              return res.status(422).send({"error" : "Couldn't Create DB record"});
             // saved!
             const theLink= "<h3>Your link is </h3><a href=\"\/api\/shorturl\/"+ rec.index+ "\">" + req.protocol + "://" + req.headers.host + "/api/shorturl/" + rec.index + "</a>";
-            res.status(201).send(theLink)
+// { original_url : 'https://freeCodeCamp.org', short_url : 1}
+            res.status(201).send({original_url : req.body.url, short_url : req.index})
           });
         });
       });
