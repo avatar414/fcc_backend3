@@ -69,7 +69,7 @@ body('url').exists().isURL(),
 (req,res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(422).send({"error": "Invalid URL"});
+    return res.status(422).send({error: 'invalid url' });
   } 
   else {
     const hostname= url.parse(req.body.url).hostname;
