@@ -1,10 +1,11 @@
 require('dotenv').config();
-const express= require('express');
+const express = require('express');
 const { MongoClient } = require('mongodb');
-const mongoose= require('mongoose');
-const cors= require('cors');
-const dns= require('dns');
-const url= require('url');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const dns = require('dns');
+const url = require('url');
+const validator = require('validator');
 
 //const bodyParser = require('body-parser');
 //console.log(process.env.MONGO_URI);
@@ -23,7 +24,7 @@ const urlSchema = new mongoose.Schema({
   created: {
     type: Date,
   },
-  index:{
+  index: {
     type: Number,
   }
 });
@@ -31,7 +32,7 @@ const urlSchema = new mongoose.Schema({
 const UrlShort = mongoose.model('UrlShort', urlSchema);
 
 const app = express();
-app.use(express.urlencoded({extended: true}));
+app.use(express.urlencoded({ extended: true }));
 app.use(function (req, res, next) {
   res.header('Cache-Control', 'private, no-cache, no-store, must-revalidate');
   res.header('Expires', '-1');
@@ -41,7 +42,7 @@ app.use(function (req, res, next) {
 
 
 //app.use(bodyParser.urlencoded({ extended: false }))
-const { body, validationResult } = require('express-validator');
+//const { body, validationResult } = require('express-validator');
 
 // Basic Configuration
 const port = process.env.PORT || 3000;
@@ -49,15 +50,15 @@ const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use('/public', express.static(`${process.cwd()}/public`));
-app.get('/', function(req, res) {
+app.get('/', function (req, res) {
   res.sendFile(process.cwd() + '/views/index.html');
 });
 
 app.get('/api/shorturl/:thisIndex', (req, res) => {
 
-  UrlShort.findOne({index : req.params.thisIndex, url : {$ne :"index"}},(err,rec) =>{
-    if(rec === null)
-      return res.status(422).send({"error" : "Index not found"});
+  UrlShort.findOne({ index: req.params.thisIndex, url: { $ne: "index" } }, (err, rec) => {
+    if (rec === null)
+      return res.status(422).send({ "error": "Index not found" });
     return res.redirect(301, rec.url);
   })
 
@@ -65,45 +66,43 @@ app.get('/api/shorturl/:thisIndex', (req, res) => {
 });
 
 app.post('/api/shorturl',
-body('url').exists().isURL(),
-(req,res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(422).send({error: 'invalid url' });
-  } 
-  else {
-    const hostname= url.parse(req.body.url).hostname;
-    if(hostname){
-      dns.lookup(hostname, (err,address,family) => {
-        if(err){
-          return res.status(422).send({"error" : "Invalid Hostname"})
+  (req, res) => {
+    console.log(req.body);
+    if(!validator.isURL(req.body.url,{require_protocol : true}))
+      return res.status(422).send({ error: "invalid url" });
+
+    const hostname = url.parse(req.body.url).hostname;
+    if (hostname) {
+      dns.lookup(hostname, (err, address, family) => {
+        if (err) {
+          return res.status(422).send({ "error": "Invalid Hostname" })
         }
-        const doc= UrlShort.findOneAndUpdate({url : "index"},{$inc : {index : 1}},{new : true, upsert : true},(err,rec) =>{
-          if(err)
-            return res.status(422).send({"error" : "DB error"})
-          theIndex= Number(rec.index);
-          console.log("hello",theIndex)
-          UrlShort.create({ url: encodeURI(req.body.url),created : Date.now(), index : rec.index },(err, rec) => {
+        const doc = UrlShort.findOneAndUpdate({ url: "index" }, { $inc: { index: 1 } }, { new: true, upsert: true }, (err, rec) => {
+          if (err)
+            return res.status(422).send({ "error": "DB error" })
+          theIndex = Number(rec.index);
+          console.log("hello", theIndex)
+          UrlShort.create({ url: encodeURI(req.body.url), created: Date.now(), index: rec.index }, (err, rec) => {
             if (err)
-             return res.status(422).send({"error" : "Couldn't Create DB record"});
+              return res.status(422).send({ "error": "Couldn't Create DB record" });
             // saved!
-            const theLink= "<h3>Your link is </h3><a href=\"\/api\/shorturl\/"+ rec.index+ "\">" + req.protocol + "://" + req.headers.host + "/api/shorturl/" + rec.index + "</a>";
-// { original_url : 'https://freeCodeCamp.org', short_url : 1}
-            res.status(201).send({"original_url" : req.body.url , "short_url" : rec.index})
+            const theLink = "<h3>Your link is </h3><a href=\"\/api\/shorturl\/" + rec.index + "\">" + req.protocol + "://" + req.headers.host + "/api/shorturl/" + rec.index + "</a>";
+            // { original_url : 'https://freeCodeCamp.org', short_url : 1}
+            res.status(201).send({ "original_url": req.body.url, "short_url": rec.index })
           });
         });
       });
     }
-  }
-});
+
+  });
 
 
 
 // Your first API endpoint
-app.get('/api/hello', function(req, res) {
+app.get('/api/hello', function (req, res) {
   res.json({ greeting: 'hello API' });
 });
 
-app.listen(port, function() {
+app.listen(port, function () {
   console.log(`Listening on port ${port}`);
 });
